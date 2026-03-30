@@ -3,11 +3,8 @@ const sql = require('mssql');
 
 const router = Router();
 
-const QUERY_COLUMNS =
-  'sender, receiver, msgdata, time, smsc_id, coding, client_msg_id, service';
-
 router.post('/', async (req, res) => {
-  const { host, port, user, password, database, table } = req.body;
+  const { host, port, user, password, database, table, columns } = req.body;
 
   if (!host || !user || !password || !database || !table) {
     return res.status(400).json({ error: 'Missing required fields', rows: [] });
@@ -29,8 +26,9 @@ router.post('/', async (req, res) => {
       requestTimeout: 15000,
     });
 
+    const selectCols = columns || '*';
     const result = await pool.request().query(
-      `SELECT ${QUERY_COLUMNS} FROM [${table}]`
+      `SELECT ${selectCols} FROM [${table}]`
     );
 
     res.json({ rows: result.recordset });

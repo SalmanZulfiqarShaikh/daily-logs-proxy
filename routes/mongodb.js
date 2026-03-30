@@ -3,20 +3,8 @@ const { MongoClient } = require('mongodb');
 
 const router = Router();
 
-const PROJECTION = {
-  _id: 0,
-  sender: 1,
-  receiver: 1,
-  msgdata: 1,
-  time: 1,
-  smsc_id: 1,
-  coding: 1,
-  client_msg_id: 1,
-  service: 1,
-};
-
 router.post('/', async (req, res) => {
-  const { host, port, user, password, database, table } = req.body;
+  const { host, port, user, password, database, table, columns } = req.body;
 
   if (!host || !user || !password || !database || !table) {
     return res.status(400).json({ error: 'Missing required fields', rows: [] });
@@ -35,10 +23,22 @@ router.post('/', async (req, res) => {
 
     await client.connect();
 
+    let projection = {};
+    if (columns && columns !== '*') {
+      columns.split(',').forEach(c => {
+        const field = c.trim();
+        if (field) projection[field] = 1;
+      });
+      if (Object.keys(projection).length > 0 && projection._id === undefined) {
+        projection._id = 0;
+      }
+    }
+    const findOptions = Object.keys(projection).length > 0 ? { projection } : {};
+
     const db = client.db(database);
     const rows = await db
       .collection(table)
-      .find({}, { projection: PROJECTION })
+      .find({}, findOptions)
       .toArray();
 
     res.json({ rows });
